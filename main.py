@@ -15,7 +15,8 @@ class BookkeepingPlugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)
         self.plugin_name = "astrbot_plugin_bookkeeping"
-        self.data_path = get_astrbot_data_path() / "plugin_data" / self.plugin_name
+        data_path_str = get_astrbot_data_path()
+        self.data_path = Path(data_path_str) / "plugin_data" / self.plugin_name
         self.data_path.mkdir(parents=True, exist_ok=True)
 
     async def initialize(self):
