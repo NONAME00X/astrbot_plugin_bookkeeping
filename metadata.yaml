@@ -1,6 +1,6 @@
 name: astrbot_plugin_bookkeeping # 插件唯一识别名，以 astrbot_plugin_ 前缀开头
 display_name: 日常记账 # 用于展示的名字，可以是方便人类阅读的名字（需要版本 >= v4.5.0，低版本不会报错，请放心填写）
-desc: https://github.com/NONAME00X/astrbot_plugin_bookkeeping。 # 插件简短描述
+desc: 一个功能完善的个人记账插件，支持支出/收入记录、统计分析、AI财务建议等功能。 # 插件简短描述
 version: v1.1.0 # 插件版本号。格式：v1.1.1 或者 v1.1
 author: NONAME # 作者
 repo: https://github.com/NONAME00X/astrbot_plugin_bookkeeping # 插件的仓库地址
