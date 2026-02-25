@@ -1,14 +1,239 @@
-# astrbot-plugin-helloworld
+# AstrBot 记账插件
 
-AstrBot 插件模板 / A template plugin for AstrBot plugin feature
+一个功能完善的个人记账插件，支持支出/收入记录、统计分析、AI财务建议等功能。
 
-> [!NOTE]
-> This repo is just a template of [AstrBot](https://github.com/AstrBotDevs/AstrBot) Plugin.
-> 
-> [AstrBot](https://github.com/AstrBotDevs/AstrBot) is an agentic assistant for both personal and group conversations. It can be deployed across dozens of mainstream instant messaging platforms, including QQ, Telegram, Feishu, DingTalk, Slack, LINE, Discord, Matrix, etc. In addition, it provides a reliable and extensible conversational AI infrastructure for individuals, developers, and teams. Whether you need a personal AI companion, an intelligent customer support agent, an automation assistant, or an enterprise knowledge base, AstrBot enables you to quickly build AI applications directly within your existing messaging workflows.
+## 功能特性
 
-# Supports
+### 📊 核心功能
+- **记录支出/收入**：支持快速记录日常消费和收入
+- **多维度统计**：日统计、月统计、总统计、分类统计
+- **详细记录查看**：查看所有记账记录的详细信息
+- **智能删除**：支持按序号删除指定账单
+- **AI财务分析**：基于记账数据提供AI财务建议
 
-- [AstrBot Repo](https://github.com/AstrBotDevs/AstrBot)
-- [AstrBot Plugin Development Docs (Chinese)](https://docs.astrbot.app/dev/star/plugin-new.html)
-- [AstrBot Plugin Development Docs (English)](https://docs.astrbot.app/en/dev/star/plugin-new.html)
+### 🎯 特色功能
+- **用户独立存储**：每个用户的账单数据独立存储，隐私安全
+- **实时统计分析**：自动计算收支平衡、分类占比等
+- **AI智能建议**：调用LLM提供专业的财务分析和建议
+- **简单易用**：通过自然语言命令即可完成所有操作
+
+## 安装方法
+
+### 方法一：通过AstrBot管理面板安装
+1. 打开AstrBot管理面板
+2. 进入插件管理页面
+3. 搜索"记账插件"或"astrbot_plugin_bookkeeping"
+4. 点击安装并启用
+
+### 方法二：手动安装
+1. 将插件文件夹复制到 `data/plugins/` 目录下
+2. 重启AstrBot或重新加载插件
+3. 在插件管理页面启用该插件
+
+## 使用方法
+
+### 基本命令
+
+#### 1. 记录支出
+```
+记账支出 <类别> <金额>
+```
+**示例：**
+```
+记账支出 餐饮 50
+记账支出 交通 15.5
+```
+
+#### 2. 记录收入
+```
+记账收入 <类别> <金额>
+```
+**示例：**
+```
+记账收入 工资 5000
+记账收入 奖金 1000
+```
+
+#### 3. 查看总统计
+```
+查账统计
+```
+显示总收入、总支出、余额和总记录数。
+
+#### 4. 查看日统计
+```
+日统计
+日统计 2024-02-25
+```
+显示指定日期的收支统计，默认显示今日统计。
+
+#### 5. 查看月统计
+```
+月统计
+月统计 2024-02
+```
+显示指定月份的收支统计，默认显示本月统计。
+
+#### 6. 查看详细记录
+```
+查账详情
+```
+显示最近20条记账记录的详细信息。
+
+#### 7. 按类别统计
+```
+按类统计
+```
+显示支出和收入的分类统计，按金额排序。
+
+#### 8. 删除账单
+```
+删除账单 <序号>
+```
+删除指定序号的账单记录（序号从"查账详情"命令获取）。
+
+### 命令示例
+
+```
+用户：记账支出 午餐 30
+机器人：✅ 记账成功！
+       类型: 支出
+       类别: 午餐
+       金额: ¥30.00
+       时间: 2024-02-25 18:30:00
+
+用户：记账收入 兼职 500
+机器人：✅ 记账成功！
+       类型: 收入
+       类别: 兼职
+       金额: ¥500.00
+       时间: 2024-02-25 18:31:00
+
+用户：查账统计
+机器人：📊 用户的账户统计
+       总收入: ¥500.00
+       总支出: ¥30.00
+       余额: ¥470.00
+       记录数: 2
+       
+       ========================================
+       [AI财务建议]
+       您的财务状况良好，收入大于支出。
+       建议继续保持良好的记账习惯，合理规划预算。
+```
+
+## 数据存储
+
+### 存储位置
+- 用户账单数据存储在：`data/plugin_data/astrbot_plugin_bookkeeping/`
+- 每个用户有独立的JSON文件：`{用户名}_bookkeeping.json`
+
+### 数据结构
+```json
+[
+  {
+    "type": "expense",
+    "category": "餐饮",
+    "amount": 50.0,
+    "timestamp": "2024-02-25T18:30:00",
+    "time": "2024-02-25 18:30:00"
+  }
+]
+```
+
+## 配置说明
+
+### metadata.yaml
+```yaml
+name: astrbot_plugin_bookkeeping
+display_name: 记账插件
+desc: AstrBot 记账插件。
+version: v1.0.0
+author: NONAME
+repo: https://github.com/NONAME00X/astrbot_plugin_bookkeeping
+```
+
+### 插件配置
+当前版本无需额外配置，安装后即可使用。
+
+## 开发说明
+
+### 技术架构
+- **基类继承**：继承自 `astrbot.api.star.Star`
+- **事件处理**：使用 `@filter.command` 装饰器注册命令处理器
+- **数据存储**：使用JSON文件存储用户数据
+- **AI集成**：通过 `context.llm_generate()` 调用LLM
+
+### 核心类
+```python
+class BookkeepingPlugin(Star):
+    """记账插件主类"""
+    
+    async def initialize(self):
+        """插件初始化"""
+        
+    async def terminate(self):
+        """插件销毁"""
+        
+    @filter.command("记账支出")
+    async def record_expense(self, event: AstrMessageEvent):
+        """记录支出"""
+        
+    # 其他命令处理方法...
+```
+
+### 扩展开发
+如需扩展功能，可修改以下部分：
+1. 添加新的命令处理器
+2. 修改数据存储方式（如使用数据库）
+3. 增加新的统计维度
+4. 优化AI分析提示词
+
+## 常见问题
+
+### Q1: 数据安全吗？
+A: 是的，每个用户的数据独立存储在本地JSON文件中，不会上传到云端。
+
+### Q2: 支持多用户吗？
+A: 支持，每个用户的账单数据完全独立。
+
+### Q3: AI分析功能需要额外配置吗？
+A: 需要AstrBot已配置可用的LLM服务，插件会自动调用当前对话的LLM提供商。
+
+### Q4: 如何备份数据？
+A: 备份 `data/plugin_data/astrbot_plugin_bookkeeping/` 目录即可。
+
+### Q5: 支持导出数据吗？
+A: 当前版本暂不支持导出功能，但可以直接访问JSON文件获取数据。
+
+## 更新日志
+
+### v1.0.0
+- 初始版本发布
+- 支持基本的记账功能
+- 支持日/月/总统计
+- 集成AI财务分析
+
+## 贡献指南
+
+欢迎提交Issue和Pull Request来改进插件！
+
+1. Fork本仓库
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 打开Pull Request
+
+## 许可证
+
+本项目采用MIT许可证，详见LICENSE文件。
+
+## 支持与反馈
+
+- 问题反馈：请提交GitHub Issue
+- 功能建议：欢迎在Issue中讨论
+- 开发交流：参考AstrBot官方文档和社区
+
+---
+
+**温馨提示**：记账是理财的第一步，坚持记账有助于培养良好的消费习惯！
