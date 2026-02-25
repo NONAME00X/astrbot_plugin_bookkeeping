@@ -51,63 +51,129 @@ class BookkeepingPlugin(Star):
             logger.debug(f"调用LLM失败: {e}")
             return ""
 
+    async def _ai_classify_category(
+        self, transaction_type: str, amount: float, description: str, umo
+    ) -> str:
+        """使用AI自动分类交易类别
+        
+        参数:
+            transaction_type: 'expense' 或 'income'
+            amount: 金额
+            description: 描述
+        
+        返回: 分类类别
+        """
+        try:
+            provider_id = await self.context.get_current_chat_provider_id(umo=umo)
+
+            type_name = "支出" if transaction_type == "expense" else "收入"
+            
+            prompt = (
+                "你是一个智能记账助手。请根据以下交易信息给出合适的分类。\n"
+                "交易类型: {type_name}\n"
+                "金额: {amount}\n"
+                "描述: {description}\n\n"
+                "请按以下格式回复，不要添加其他内容：\n"
+                "类别: [分类名称]\n\n"
+                "分类名称请使用中文，常见支出分类：餐饮、交通、住房、水电、食品、购物、娱乐、医疗、教育、技术服务、其他\n"
+                "常见收入分类：工资、奖金、租金、退款、投资、兼职、其他\n"
+                "如果无法确定，类别用'其他'"
+            ).format(type_name=type_name, amount=amount, description=description)
+
+            llm_resp = await self.context.llm_generate(
+                chat_provider_id=provider_id,
+                prompt=prompt,
+            )
+
+            response = llm_resp.completion_text.strip()
+            
+            # 解析响应
+            category = "其他"
+            
+            for line in response.split('\n'):
+                line = line.strip()
+                if line.startswith('类别:'):
+                    category = line.replace('类别:', '').strip()
+                    if not category:
+                        category = "其他"
+                    break
+            
+            return category
+            
+        except Exception as e:
+            logger.debug(f"AI分类失败: {e}")
+            # 默认分类
+            return "其他"
+
     @filter.command("记账支出")
     async def record_expense(self, event: AstrMessageEvent):
-        """记录支出: 记账支出 <类别> <金额>
+        """记录支出: 记账支出 <金额> [描述]
 
-        例子: 记账支出 猪肉 15
+        例子: 
+        记账支出 50
+        记账支出 15.5 地铁费
         """
         user_name = event.get_sender_name()
         message = event.message_str.strip()
 
         match = re.search(
-            r"记账支出[\s\n]+(.+?)[\s\n]+(\d+(?:\.\d{1,2})?)", message
+            r"记账支出[\s\n]+(\d+(?:\.\d{1,2})?)(?:[\s\n]+(.+))?", message
         )
 
         if not match:
-            yield event.plain_result("❌ 格式错误！用法: 记账支出 <类别> <金额>")
+            yield event.plain_result("❌ 格式错误！用法: 记账支出 <金额> [描述]")
             return
 
-        category = match.group(1).strip()
-        amount = float(match.group(2))
-
-        await self._save_record(user_name, "expense", category, amount)
-        yield event.plain_result(
-            f"✅ 记账成功！\n"
-            f"类型: 支出\n"
-            f"类别: {category}\n"
-            f"金额: ¥{amount:.2f}\n"
-            f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        amount = float(match.group(1))
+        description = match.group(2).strip() if match.group(2) else ""
+        
+        # 使用AI自动分类
+        category = await self._ai_classify_category(
+            "expense", amount, description, event.unified_msg_origin
         )
+
+        await self._save_record(user_name, "expense", category, amount, description)
+        
+        response = f"✅ 记账成功！\n类型: 支出\n类别: {category}\n金额: ¥{amount:.2f}\n时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        if description:
+            response += f"\n描述: {description}"
+        
+        yield event.plain_result(response)
 
     @filter.command("记账收入")
     async def record_income(self, event: AstrMessageEvent):
-        """记录收入: 记账收入 <类别> <金额>
+        """记录收入: 记账收入 <金额> [描述]
 
-        例子: 记账收入 工资 50
+        例子: 
+        记账收入 5000
+        记账收入 1000 项目奖金
         """
         user_name = event.get_sender_name()
         message = event.message_str.strip()
 
         match = re.search(
-            r"记账收入[\s\n]+(.+?)[\s\n]+(\d+(?:\.\d{1,2})?)", message
+            r"记账收入[\s\n]+(\d+(?:\.\d{1,2})?)(?:[\s\n]+(.+))?", message
         )
 
         if not match:
-            yield event.plain_result("❌ 格式错误！用法: 记账收入 <类别> <金额>")
+            yield event.plain_result("❌ 格式错误！用法: 记账收入 <金额> [描述]")
             return
 
-        category = match.group(1).strip()
-        amount = float(match.group(2))
-
-        await self._save_record(user_name, "income", category, amount)
-        yield event.plain_result(
-            f"✅ 记账成功！\n"
-            f"类型: 收入\n"
-            f"类别: {category}\n"
-            f"金额: ¥{amount:.2f}\n"
-            f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        amount = float(match.group(1))
+        description = match.group(2).strip() if match.group(2) else ""
+        
+        # 使用AI自动分类
+        category = await self._ai_classify_category(
+            "income", amount, description, event.unified_msg_origin
         )
+
+        await self._save_record(user_name, "income", category, amount, description)
+        
+        response = f"✅ 记账成功！\n类型: 收入\n类别: {category}\n金额: ¥{amount:.2f}\n时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        if description:
+            response += f"\n描述: {description}"
+        
+        yield event.plain_result(response)
 
     @filter.command("查账统计")
     async def query_summary(self, event: AstrMessageEvent):
@@ -255,14 +321,15 @@ class BookkeepingPlugin(Star):
             yield event.plain_result("📋 您还没有记账数据")
             return
 
-        records = sorted(records, key=lambda x: x["timestamp"], reverse=True)
+        records = sorted(records, key=lambda x: x["time"], reverse=True)
 
         details = f"📋 {user_name} 的账户详情\n" + "=" * 40 + "\n"
         for idx, record in enumerate(records[-20:], 1):
             record_type = "📈 收入" if record["type"] == "income" else "📉 支出"
+            description_text = f" - {record['description']}" if record.get('description') else ""
             details += (
                 f"{idx}. {record_type} | {record['category']} | "
-                f"¥{record['amount']:.2f} | {record['time']}\n"
+                f"¥{record['amount']:.2f} | {record['time']}{description_text}\n"
             )
 
         yield event.plain_result(details)
@@ -339,7 +406,7 @@ class BookkeepingPlugin(Star):
             yield event.plain_result("📋 您还没有记账数据")
             return
 
-        records = sorted(records, key=lambda x: x["timestamp"], reverse=True)
+        records = sorted(records, key=lambda x: x["time"], reverse=True)
 
         if index < 1 or index > len(records[-20:]):
             yield event.plain_result(
@@ -353,16 +420,14 @@ class BookkeepingPlugin(Star):
         self._save_records(user_name, records)
 
         record_type = "收入" if record_to_delete["type"] == "income" else "支出"
-        yield event.plain_result(
-            f"✅ 已删除该账单\n"
-            f"类型: {record_type}\n"
-            f"类别: {record_to_delete['category']}\n"
-            f"金额: ¥{record_to_delete['amount']:.2f}\n"
-            f"时间: {record_to_delete['time']}"
-        )
+        response = f"✅ 已删除该账单\n类型: {record_type}\n类别: {record_to_delete['category']}\n金额: ¥{record_to_delete['amount']:.2f}\n时间: {record_to_delete['time']}"
+        if record_to_delete.get('description'):
+            response += f"\n描述: {record_to_delete['description']}"
+        
+        yield event.plain_result(response)
 
     async def _save_record(
-        self, user_name: str, record_type: str, category: str, amount: float
+        self, user_name: str, record_type: str, category: str, amount: float, description: str = ""
     ):
         """将记录保存到用户的JSON文件"""
         records = self._load_records(user_name)
@@ -372,7 +437,7 @@ class BookkeepingPlugin(Star):
             "type": record_type,
             "category": category,
             "amount": amount,
-            "timestamp": now.isoformat(),
+            "description": description,
             "time": now.strftime("%Y-%m-%d %H:%M:%S"),
         }
 
